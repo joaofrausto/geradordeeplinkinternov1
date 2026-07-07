@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deeplinks Internos · Rappi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --bg:#191410;            /* fundo geral: preto quente e suave */
+    --surface:#251E18;       /* cartão do formulário */
+    --surface-2:#2F261F;     /* hover sutil */
+    --inset:#141009;         /* campos, caixa de código */
+    --line:#4C3E31;          /* bordas no escuro (reforçadas) */
+    --cream:#F4ECE4;         /* texto principal */
+    --muted:#A89A8D;         /* texto secundário */
+    --orange:#E85C31;        /* acento (levemente menos saturado) */
+    --orange-deep:#CB4C1E;
+    --orange-glow:rgba(232,92,49,.32);
+    --radius:14px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--bg);
+    color:var(--cream);
+    font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+  }
+  /* fita fina de identidade no topo */
+  body::before{content:'';position:fixed;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--orange),#FF8054);z-index:10;}
+
+  .wrap{max-width:1060px;margin:0 auto;padding:44px 22px 72px;}
+
+  /* ---------- header ---------- */
+  header.app{display:flex;align-items:center;gap:14px;margin-bottom:8px;}
+  .mark{width:42px;height:42px;border-radius:12px;background:var(--orange);flex:none;
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    box-shadow:0 8px 22px -8px var(--orange-glow);}
+  .mark svg{width:22px;height:22px;}
+  .titles{flex:1;min-width:0;}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--orange);margin-bottom:2px;}
+  header.app h1{font-size:25px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1;color:var(--cream);}
+  .tag-internal{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:#FFB392;background:rgba(232,92,49,.14);border:1px solid rgba(232,92,49,.36);
+    padding:6px 12px;border-radius:20px;white-space:nowrap;flex:none;
+    display:flex;align-items:center;gap:6px;}
+  .tag-internal::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--orange);}
+  .subtitle{color:var(--muted);font-size:14.5px;margin:0 0 30px 56px;max-width:60ch;}
+  .subtitle strong{color:var(--cream);font-weight:600;}
+  @media(max-width:560px){ .subtitle{margin-left:0;} .tag-internal{display:none;} }
+
+  /* ---------- grid ---------- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+  @media(max-width:820px){.grid{grid-template-columns:1fr;}}
+
+  /* ---------- cartão do formulário ---------- */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:24px;}
+  .card h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
+    font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:8px;}
+  .card h2::before{content:'';width:14px;height:2px;background:var(--orange);border-radius:2px;}
+
+  /* cabeçalho do card com botão de limpar */
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;}
+  .card-head h2{margin:0;}
+  .btn-reset{font-family:inherit;font-size:12px;font-weight:600;color:var(--cream);
+    background:transparent;border:1px solid var(--line);border-radius:9px;
+    padding:5px 12px 5px 6px;cursor:pointer;transition:all .14s;display:flex;align-items:center;gap:8px;}
+  .btn-reset svg{width:14px;height:14px;color:#fff;background:var(--orange);
+    border-radius:7px;padding:4px;box-sizing:content-box;
+    box-shadow:0 3px 10px -3px var(--orange-glow);transition:transform .2s;}
+  .btn-reset:hover{border-color:var(--orange);background:rgba(232,92,49,.10);}
+  .btn-reset:hover svg{transform:rotate(-45deg);}
+
+  /* toast / aviso de cópia */
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(16px);
+    background:#241E18;color:var(--cream);border:1px solid var(--line);
+    padding:12px 18px;border-radius:11px;font-size:13.5px;font-weight:600;
+    box-shadow:0 16px 40px -14px rgba(0,0,0,.65);opacity:0;pointer-events:none;
+    transition:opacity .22s ease, transform .22s ease;z-index:60;
+    display:flex;align-items:center;gap:10px;max-width:calc(100% - 40px);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast .tdot{width:8px;height:8px;border-radius:50%;background:#12A150;flex:none;}
+  .toast.warn .tdot{background:#D9A441;}
+
+  /* ---------- fields ---------- */
+  .field{margin-bottom:17px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px;color:var(--cream);}
+  .field .hint{font-size:11.5px;color:var(--muted);font-weight:400;margin-left:7px;}
+  select,input,textarea{
+    width:100%;font-family:inherit;font-size:14px;color:var(--cream);
+    background:var(--inset);border:1px solid var(--line);border-radius:9px;
+    padding:11px 13px;transition:border-color .14s,box-shadow .14s,background .14s;
+  }
+  select:hover,input:hover,textarea:hover{border-color:#63513F;}
+  textarea{resize:vertical;min-height:78px;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  select:focus,input:focus,textarea:focus{
+    outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,92,49,.22);
+  }
+  select:disabled{opacity:.5;cursor:not-allowed;}
+  select option{background:#251E18;color:var(--cream);}
+  ::placeholder{color:#6F6053;}
+
+  /* janela read-only do store type (conferência) */
+  .readonly-box{
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:#FFB08C;
+    background:var(--inset);border:1px dashed rgba(232,92,49,.48);border-radius:9px;
+    padding:11px 13px;min-height:42px;display:flex;align-items:center;gap:8px;
+    user-select:all;cursor:default;
+  }
+  .readonly-box::before{content:'🔒';font-size:12px;opacity:.6;filter:grayscale(1);}
+  .readonly-box .ro-empty{color:var(--muted);}
+
+  /* segmented control (tipo de redirecionamento) */
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .seg button{
+    font-family:inherit;font-size:13px;font-weight:600;color:var(--cream);
+    background:var(--inset);border:1px solid var(--line);border-radius:9px;
+    padding:12px 10px;cursor:pointer;transition:all .14s;text-align:left;
+  }
+  .seg button:hover{border-color:var(--orange);background:var(--surface-2);}
+  .seg button.on{background:var(--orange);color:#fff;border-color:var(--orange);
+    box-shadow:0 8px 18px -8px var(--orange-glow);}
+
+  #dynamicFields:empty{display:none;}
+  .divider{height:1px;background:var(--line);margin:20px 0;}
+
+  /* ---------- painel de saída: agora predominantemente laranja ---------- */
+  .output{
+    background:linear-gradient(155deg,#E86E3C 0%,#D8552B 58%,#C84C20 100%);
+    border:1px solid rgba(255,255,255,.15);border-radius:var(--radius);
+    padding:24px;position:sticky;top:28px;color:#2A140A;
+    box-shadow:0 20px 46px -22px var(--orange-glow);
+  }
+  .out-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;
+    color:rgba(42,20,10,.72);font-weight:700;margin:0 0 10px;
+    display:flex;align-items:center;gap:8px;}
+  .badge{font-size:10px;background:rgba(26,12,6,.22);color:#FFEEE4;padding:3px 9px;
+    border-radius:20px;letter-spacing:.04em;font-weight:600;}
+  .url-box{
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.65;
+    background:#15100B;border:1px solid rgba(0,0,0,.4);border-radius:10px;
+    padding:15px 17px;word-break:break-all;color:#FFA877;min-height:56px;
+    display:flex;align-items:center;box-shadow:inset 0 1px 4px rgba(0,0,0,.35);
+  }
+  .url-box.pending{color:#B7A99C;}
+  .url-box .placeholder{color:#7A6B5E;}
+  .url-box .placeholder.needfill{color:#F4C06A;font-weight:600;}
+  .actions{display:flex;gap:10px;margin-top:15px;}
+  .btn{font-family:inherit;font-size:13px;font-weight:600;padding:11px 16px;border-radius:9px;
+    cursor:pointer;border:1px solid transparent;transition:all .14s;flex:1;}
+  .btn-primary{background:#191410;color:var(--cream);}
+  .btn-primary:hover{background:#0F0B07;}
+  .btn-ghost{background:rgba(26,12,6,.08);color:#2A140A;border-color:rgba(42,20,10,.30);}
+  .btn-ghost:hover{background:rgba(26,12,6,.16);border-color:rgba(42,20,10,.48);}
+  .btn.copied{background:#0E7A3C;border-color:#0E7A3C;color:#fff;}
+  .btn.warn{background:#D9A441;border-color:#D9A441;color:#241206;}
+
+  .meta{margin-top:20px;font-size:12px;color:rgba(42,20,10,.72);line-height:1.7;}
+  .meta .row{display:flex;justify-content:space-between;gap:12px;
+    border-top:1px solid rgba(42,20,10,.16);padding:8px 0;}
+  .meta .row span:last-child{color:#2A140A;font-family:'IBM Plex Mono',monospace;font-weight:500;
+    text-align:right;word-break:break-all;}
+
+  .note{margin-top:24px;font-size:12.5px;color:var(--muted);line-height:1.65;
+    background:var(--surface);border:1px solid var(--line);border-radius:11px;
+    padding:14px 16px;}
+  .note strong{color:var(--cream);font-weight:600;}
+  .note code{font-family:'IBM Plex Mono',monospace;font-size:11.5px;
+    background:rgba(232,92,49,.14);color:#FFB392;padding:1px 5px;border-radius:4px;}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9.5 14.5l5-5"/>
+        <path d="M11 6.5l1-1a4 4 0 0 1 5.7 5.7l-1 1"/>
+        <path d="M13 17.5l-1 1a4 4 0 0 1-5.7-5.7l1-1"/>
+      </svg>
+    </div>
+    <div class="titles">
+      <div class="eyebrow">Gerador · Rappi</div>
+      <h1>Deeplinks Internos</h1>
+    </div>
+    <span class="tag-internal">Uso interno</span>
+  </header>
+  <p class="subtitle">Crie <strong>deeplinks internos</strong> por vertical, marca e tipo de redirecionamento.</p>
+
+  <div class="grid">
+    <!-- ============ FORMULÁRIO ============ -->
+    <div class="card">
+      <div class="card-head">
+        <h2>Parâmetros</h2>
+        <button class="btn-reset" id="resetBtn" type="button" title="Apagar tudo e recomeçar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+          Limpar seleção
+        </button>
+      </div>
+
+      <div class="field">
+        <label>Vertical</label>
+        <select id="vertical"></select>
+      </div>
+
+      <div class="field">
+        <label>Marca <span class="hint" id="brandHint"></span></label>
+        <select id="brand"></select>
+      </div>
+
+      <div class="field">
+        <label>Store type</label>
+        <div class="readonly-box" id="storeTypeBox"><span class="ro-empty">—</span></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label>Tipo de redirecionamento</label>
+        <div class="seg" id="actionSeg"></div>
+      </div>
+
+      <div id="dynamicFields"></div>
+    </div>
+
+    <!-- ============ SAÍDA ============ -->
+    <div class="output">
+      <div class="out-label">Deeplink interno gerado <span class="badge" id="patternBadge">—</span></div>
+      <div class="url-box" id="urlBox"><span class="placeholder">Selecione os parâmetros…</span></div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="copyBtn">Copiar link</button>
+      </div>
+
+      <div class="meta" id="meta"></div>
+    </div>
+  </div>
+
+  <p class="note">
+    <strong>Todas as verticais configuradas</strong> com o formato oficial
+    <code>gbrappi://com.grability.rappi?…</code>. A estrutura é a mesma para todas — muda
+    apenas o <code>store_type</code> (Groceries <code>market</code>, Farma <code>farmacia</code>,
+    Pets <code>pets_cpgs</code>, Shopping <code>rappimall_parent</code>), definido no bloco
+    <code>STORE_TYPE</code>.
+  </p>
+</div>
+
+<div class="toast" id="toast"><span class="tdot"></span><span id="toastMsg"></span></div>
+
+<script>
+/* ============================================================
+   CONFIG  —  ÚNICO PONTO A EDITAR QUANDO A LISTAGEM CHEGAR
+   ============================================================ */
+
+// 1) Verticais disponíveis   (id = valor usado na URL — ajuste se o Rappi usar outro token)
+const VERTICALS = [
+  { id:'groceries', label:'Groceries' },
+  { id:'farma',    label:'Farma' },
+  { id:'pets',     label:'Pets' },
+  { id:'shopping', label:'Shopping' },
+];
+
+// 2) Marcas  (verticals:[] = aparece em todas). storeType associado direto à marca.
+//    Lista importada do CSV oficial (VERTICAL, BRAND, STORE TYPE).
+const BRANDS = [
+  { storeType:'pao_de_azucar', label:'PAO DE AZUCAR', verticals:['groceries'] },
+  { storeType:'mambo', label:'MAMBO', verticals:['groceries'] },
+  { storeType:'carrefour_hiper_super_market', label:'CARREFOUR', verticals:['groceries'] },
+  { storeType:'santa_luzia', label:'CASA SANTA LUZIA', verticals:['groceries'] },
+  { storeType:'mundial', label:'MUNDIAL', verticals:['groceries'] },
+  { storeType:'sao_paulo', label:'DROGARIA SÃO PAULO', verticals:['farma'] },
+  { storeType:'zonasul', label:'ZONA SUL', verticals:['groceries'] },
+  { storeType:'st_marche', label:'ST MARCHE', verticals:['groceries'] },
+  { storeType:'petzdark', label:'PETZ', verticals:['pets'] },
+  { storeType:'kalunga_enc', label:'KALUNGA LIBRERIA', verticals:['shopping'] },
+  { storeType:'assaiatacadista_nc', label:'ASSAI ATACADISTA', verticals:['groceries'] },
+  { storeType:'panvel', label:'PANVEL', verticals:['farma'] },
+  { storeType:'sephora_enc', label:'SEPHORA BELEZA', verticals:['shopping'] },
+  { storeType:'hortifruti', label:'HORTIFRUTI', verticals:['groceries'] },
+  { storeType:'verdemar', label:'VERDEMAR', verticals:['groceries'] },
+  { storeType:'oba_hortifruti', label:'OBA HORTIFRUTI', verticals:['groceries'] },
+  { storeType:'sao_luiz', label:'MERCADINHO SÃO LUIZ', verticals:['groceries'] },
+  { storeType:'venancio', label:'VENANCIO', verticals:['farma'] },
+  { storeType:'pague_menos', label:'PAGUE MENOS', verticals:['farma'] },
+  { storeType:'mundo_pet', label:'MUNDO PET', verticals:['pets'] },
+  { storeType:'festval', label:'FESTVAL', verticals:['groceries'] },
+  { storeType:'condorsupermercados_super', label:'CONDOR SUPERMERCADOS', verticals:['groceries'] },
+  { storeType:'rihappy', label:'RI HAPPY', verticals:['shopping'] },
+  { storeType:'swift', label:'SWIFT', verticals:['groceries'] },
+  { storeType:'pacheco', label:'DROGARIA PACHECO', verticals:['farma'] },
+  { storeType:'super', label:'EMPORIUM SAO PAULO', verticals:['groceries'] },
+  { storeType:'drogaria_iguatemi', label:'DROGARIA IGUATEMI', verticals:['farma'] },
+  { storeType:'drogasmil', label:'DROGASMIL', verticals:['farma'] },
+  { storeType:'multicoisas', label:'MULTICOISAS', verticals:['shopping'] },
+  { storeType:'nestle_nespresso_natal', label:'NESTLE', verticals:['shopping'] },
+  { storeType:'nordestao', label:'NORDESTAO', verticals:['groceries'] },
+  { storeType:'drogariaaraujo', label:'DROGARIA ARAUJO', verticals:['farma'] },
+  { storeType:'granado_enc', label:'GRANADO', verticals:['shopping'] },
+  { storeType:'sams_club', label:'SAMSCLUB', verticals:['groceries'] },
+  { storeType:'promofarma', label:'PROMOFARMA', verticals:['farma'] },
+  { storeType:'americanpet_nc', label:'AMERICAN PET', verticals:['pets'] },
+  { storeType:'farmalife', label:'FARMALIFE', verticals:['farma'] },
+  { storeType:'santa_maria', label:'EMPÓRIO SANTA MARIA', verticals:['groceries'] },
+  { storeType:'superlagoa', label:'SUPER LAGOA', verticals:['groceries'] },
+  { storeType:'lojasmel_mt_enc', label:'LOJAS MEL', verticals:['shopping'] },
+  { storeType:'petlove_mt_enc', label:'PETLOVE', verticals:['pets'] },
+  { storeType:'soneda', label:'SONEDA', verticals:['shopping'] },
+  { storeType:'mundo_cabeleireiro', label:'MUNDO CABELEIREIRO', verticals:['shopping'] },
+  { storeType:'lindt_shopper', label:'LINDT', verticals:['shopping'] },
+  { storeType:'dengo_chocolates_enc', label:'DENGO CHOCOLATES', verticals:['shopping'] },
+  { storeType:'bresil', label:'BRESIL', verticals:['shopping'] },
+  { storeType:'precolandia_mt_enc', label:'PRECOLANDIA', verticals:['shopping'] },
+  { storeType:'quitandapinheiros_mt_nc', label:'QUITANDA PINHEIROS', verticals:['groceries'] },
+  { storeType:'dogsday_mt_nc', label:'DOGS DAY', verticals:['pets'] },
+  { storeType:'provence', label:'PROVENCE', verticals:['shopping'] },
+  { storeType:'kopenhagennovo', label:'KOPENHAGEN', verticals:['shopping'] },
+  { storeType:'drogarianovaesperancabr_mt_nc', label:'DROGARIA NOVA ESPERANCA BR', verticals:['farma'] },
+  { storeType:'livoeyewear_mt_enc', label:'LIVO EYEWEAR', verticals:['shopping'] },
+  { storeType:'bemhortifruti_super', label:'BEM HORTIFRUTI', verticals:['groceries'] },
+  { storeType:'exclusiva', label:'EXCLUSIVA', verticals:['shopping'] },
+  { storeType:'dicico', label:'DICICO', verticals:['shopping'] },
+  { storeType:'encrenquinhaspetshop_mt_nc', label:'ENCRENQUINHAS PET SHOP', verticals:['pets'] },
+  { storeType:'cacaushowbr_mt_enc', label:'CACAU SHOW BR', verticals:['shopping'] },
+  { storeType:'clarat_mt_enc', label:'CLARATÍ', verticals:['shopping'] },
+  { storeType:'dr_hato_petshop', label:'DR. HATO', verticals:['pets'] },
+  { storeType:'drogarias_tamoio', label:'DROGARIAS TAMOIO', verticals:['farma'] },
+  { storeType:'cencosudbrasilatacadoltda_mt_nc', label:'GIGA ATACADO', verticals:['groceries'] },
+  { storeType:'rosario', label:'DROGARIA ROSÁRIO', verticals:['farma'] },
+  { storeType:'prezunic_mt_nc', label:'PREZUNIC', verticals:['groceries'] },
+  { storeType:'contem1g_mt_enc', label:'SALLVE', verticals:['shopping'] },
+  { storeType:'apoio_mineiro_nc', label:'APOIO MINEIRO', verticals:['groceries'] },
+  { storeType:'brasilcacau', label:'BRASIL CACAU', verticals:['shopping'] },
+  { storeType:'phebo_enc', label:'PHEBO', verticals:['shopping'] },
+];
+
+// 3) Deeplink por VERTICAL
+//    A estrutura é a mesma para todas as verticais — só o valor de store_type muda.
+const BASE = 'gbrappi://com.grability.rappi?';
+
+// Parâmetros comuns a todas as verticais.
+const COMMON_PARAMS = {
+  brandParam:'market_type',      // recebe o store type da marca (coluna do CSV)
+  actionParam:{
+    brand_home:  null,           // home não tem parâmetro extra
+    search:      'search_key',
+    corredor:    'corridors_ids',
+    subcorredor: 'sub_corridors_ids',
+    product_ids: 'product_id',
+  }
+};
+
+// store_type fixo de cada vertical (é só isso que muda entre elas).
+const STORE_TYPE = {
+  groceries: 'market',
+  farma:     'farmacia',
+  pets:      'pets_cpgs',
+  shopping:  'rappimall_parent',
+};
+
+// Config final montada automaticamente a partir dos dois blocos acima.
+const VERTICAL_DEEPLINK = Object.fromEntries(
+  Object.entries(STORE_TYPE).map(([v, storeType]) => [v, { storeType, ...COMMON_PARAMS }])
+);
+
+// 4) Redirecionamentos → campos, validação e como o VALOR do parâmetro é montado.
+//    value() retorna só o valor que vai no parâmetro (ou null quando não há, ex: home).
+const ACTIONS = {
+  brand_home: {
+    label:'Home da marca',
+    fields:[],
+    value:() => null
+  },
+  search: {
+    label:'Busca (search)',
+    fields:[
+      { key:'query', label:'Palavra-chave', type:'text', placeholder:'ex: sadia',
+        hint:'sem espaços ou traços',
+        filter:v => v.replace(/[\s\-\u2013\u2014]+/g,'') }
+    ],
+    value:(values) => encodeURIComponent(values.query||'')
+  },
+  corredor: {
+    label:'Corredor',
+    fields:[
+      { key:'aisleId', label:'ID do corredor', type:'text', placeholder:'ex: 36473',
+        hint:'apenas números', inputmode:'numeric',
+        filter:v => v.replace(/\D+/g,'') }
+    ],
+    value:(values) => values.aisleId||''
+  },
+  subcorredor: {
+    label:'Subcorredor',
+    fields:[
+      { key:'subAisleId', label:'ID do subcorredor', type:'text', placeholder:'ex: 36473',
+        hint:'apenas números', inputmode:'numeric',
+        filter:v => v.replace(/\D+/g,'') }
+    ],
+    value:(values) => values.subAisleId||''
+  },
+  product_ids: {
+    label:'Lista de product IDs',
+    fields:[
+      { key:'ids', label:'Product IDs', type:'textarea',
+        hint:'apenas números · utilize vírgula ou espaço para separação dos Product IDs',
+        placeholder:'ex:\n909352905\n909352904\nou: 909352905, 909352904',
+        filter:v => v.replace(/[^\d,\s]+/g,'') }
+    ],
+    value:(values) => (values.ids||'').split(/[\s,]+/).filter(Boolean).join(',')
+  },
+};
+
+// Monta o deeplink final a partir da vertical + marca + redirecionamento.
+// Retorna null se a vertical ainda não tem padrão configurado.
+function buildDeeplink({verticalId, brand, action, actionValue}){
+  const cfg = VERTICAL_DEEPLINK[verticalId];
+  if(!cfg) return null;
+  let url = `${BASE}&store_type=${cfg.storeType}&${cfg.brandParam}=${brand.storeType}`;
+  const param = cfg.actionParam[action];
+  if(param && actionValue){ url += `&${param}=${actionValue}`; }
+  return url;
+}
+
+/* ============================================================
+   LÓGICA  (normalmente não precisa mexer daqui pra baixo)
+   ============================================================ */
+
+const $ = id => document.getElementById(id);
+const state = { action:'brand_home', values:{} };
+
+// -- popular verticais (ordem alfabética)
+const vSel = $('vertical');
+[...VERTICALS].sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'))
+  .forEach(v => vSel.add(new Option(v.label, v.id)));
+
+// -- popular marcas conforme a vertical  (value = índice na lista filtrada)
+// Ordem fixa das primeiras marcas por vertical; o restante segue alfabético.
+const BRAND_ORDER = {
+  groceries: ['pao_de_azucar','carrefour_hiper_super_market','mambo','zonasul','st_marche'],
+};
+let filteredBrands = [];
+function refreshBrands(){
+  const v = vSel.value;
+  const bSel = $('brand');
+  bSel.innerHTML = '';
+  const priority = BRAND_ORDER[v] || [];
+  filteredBrands = BRANDS
+    .filter(b => !b.verticals.length || b.verticals.includes(v))
+    .sort((a,b)=>{
+      const pa = priority.indexOf(a.storeType), pb = priority.indexOf(b.storeType);
+      const ra = pa === -1 ? Infinity : pa, rb = pb === -1 ? Infinity : pb;
+      if(ra !== rb) return ra - rb;                       // prioridade primeiro
+      return a.label.localeCompare(b.label,'pt-BR');       // resto alfabético
+    });
+  bSel.add(new Option('Selecione a marca…', ''));   // vazio de início
+  const nPriority = filteredBrands.filter(b => priority.includes(b.storeType)).length;
+  filteredBrands.forEach((b, i) => {
+    // linha suave demarcando o início das marcas em ordem alfabética
+    if(priority.length && nPriority > 0 && i === nPriority){
+      const sep = new Option('──────────────────', '');
+      sep.disabled = true;
+      bSel.add(sep);
+    }
+    bSel.add(new Option(b.label, String(i)));
+  });
+  $('brandHint').textContent = filteredBrands.length
+    ? `${filteredBrands.length} na vertical` : 'nenhuma cadastrada';
+}
+
+// -- segmented control das ações
+const seg = $('actionSeg');
+Object.entries(ACTIONS).forEach(([key, cfg]) => {
+  const b = document.createElement('button');
+  b.textContent = cfg.label;
+  b.dataset.key = key;
+  b.className = key === state.action ? 'on' : '';
+  b.onclick = () => { state.action = key; renderSeg(); renderFields(); update(); };
+  seg.appendChild(b);
+});
+function renderSeg(){
+  [...seg.children].forEach(b => b.classList.toggle('on', b.dataset.key === state.action));
+}
+
+// -- campos dinâmicos por ação
+function renderFields(){
+  const box = $('dynamicFields');
+  box.innerHTML = '';
+  state.values = {};
+  const cfg = ACTIONS[state.action];
+  if(cfg.fields.length){
+    const div = document.createElement('div');
+    div.className = 'divider';
+    box.appendChild(div);
+  }
+  cfg.fields.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    const lbl = document.createElement('label');
+    lbl.textContent = f.label;
+    if(f.hint){
+      const h = document.createElement('span');
+      h.className = 'hint';
+      h.textContent = f.hint;
+      lbl.appendChild(h);
+    }
+    const el = f.type === 'textarea'
+      ? document.createElement('textarea')
+      : document.createElement('input');
+    if(f.type !== 'textarea') el.type = 'text';
+    if(f.inputmode) el.setAttribute('inputmode', f.inputmode);
+    el.placeholder = f.placeholder || '';
+    el.oninput = () => {
+      if(f.filter){
+        const clean = f.filter(el.value);
+        if(clean !== el.value){                       // mantém o cursor no fim ao limpar
+          const atEnd = el.selectionStart === el.value.length;
+          el.value = clean;
+          if(atEnd){ el.selectionStart = el.selectionEnd = clean.length; }
+        }
+      }
+      state.values[f.key] = el.value;
+      update();
+    };
+    wrap.appendChild(lbl); wrap.appendChild(el);
+    box.appendChild(wrap);
+  });
+}
+
+// -- resolve o store type da marca selecionada
+function currentBrand(){
+  const i = parseInt($('brand').value, 10);
+  return filteredBrands[i] || null;
+}
+
+// -- status da seleção (o que ainda falta para gerar o deeplink)
+function selectionStatus(){
+  const brand = currentBrand();
+  if(!brand) return { ok:false, reason:'brand' };
+  if(!VERTICAL_DEEPLINK[vSel.value]) return { ok:false, reason:'config' };
+  const cfg = ACTIONS[state.action];
+  const missing = cfg.fields.filter(f => !String(state.values[f.key] || '').trim());
+  if(missing.length) return { ok:false, reason:'fields', fields:missing };
+  return { ok:true };
+}
+
+// -- monta e mostra o deeplink
+function update(){
+  const vertical = vSel.value;
+  const brand    = currentBrand();
+  const storeType = brand ? brand.storeType : '';
+  const cfg = ACTIONS[state.action];
+  const box = $('urlBox');
+
+  refreshStoreTypeBox();
+  $('patternBadge').textContent = cfg.label;
+
+  const st = selectionStatus();
+  if(!st.ok){
+    box.classList.toggle('pending', st.reason === 'config');
+    let msg;
+    if(st.reason === 'brand'){
+      msg = '<span class="placeholder">Selecione uma marca…</span>';
+    } else if(st.reason === 'config'){
+      msg = '<span class="placeholder">Padrão de deeplink desta vertical ainda não configurado.</span>';
+    } else { // fields
+      const names = st.fields.map(f => f.label).join(', ');
+      msg = '<span class="placeholder needfill">⚠ Preencha para gerar o link: ' + names + '</span>';
+    }
+    box.innerHTML = msg;
+    renderMeta(vertical, storeType, cfg.label);
+    return;
+  }
+
+  const actionValue = cfg.value(state.values);
+  const url = buildDeeplink({ verticalId:vertical, brand, action:state.action, actionValue });
+  box.classList.remove('pending');
+  box.textContent = url;
+  renderMeta(vertical, storeType, cfg.label);
+}
+
+// -- janela read-only de conferência do store type
+function refreshStoreTypeBox(){
+  const brand = currentBrand();
+  const el = $('storeTypeBox');
+  if(brand){ el.textContent = brand.storeType; }
+  else { el.innerHTML = '<span class="ro-empty">—</span>'; }
+}
+
+function renderMeta(vertical, storeType, action){
+  $('meta').innerHTML = `
+    <div class="row"><span>Vertical</span><span>${vertical||'—'}</span></div>
+    <div class="row"><span>Store Type</span><span>${storeType||'—'}</span></div>
+    <div class="row"><span>Redirecionamento</span><span>${action}</span></div>`;
+}
+
+// -- copiar / abrir
+function currentUrl(){
+  const box = $('urlBox');
+  if(box.querySelector('.placeholder')) return null;   // sem deeplink válido
+  return box.textContent;
+}
+
+function flashBtn(btn, cls, text, revert){
+  btn.classList.add(cls); btn.textContent = text;
+  setTimeout(()=>{ btn.classList.remove(cls); btn.textContent = revert; }, 1600);
+}
+
+// aviso flutuante (toast)
+let toastTimer;
+function showToast(msg, warn){
+  const t = $('toast');
+  $('toastMsg').textContent = msg;
+  t.classList.toggle('warn', !!warn);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2800);
+}
+
+function selectUrlText(){
+  try{
+    const box = $('urlBox');
+    const r = document.createRange(); r.selectNodeContents(box);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }catch(e){}
+}
+
+// cópia via textarea + execCommand (roda dentro do gesto do clique; funciona em sandbox)
+function execCopy(text){
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly','');
+    ta.style.position='fixed'; ta.style.top='-1000px'; ta.style.opacity='0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+
+$('copyBtn').onclick = () => {
+  const st = selectionStatus();
+  if(!st.ok){
+    let msg = 'Complete a seleção antes de copiar';
+    if(st.reason === 'brand') msg = 'Selecione a marca antes de copiar';
+    else if(st.reason === 'config') msg = 'Padrão desta vertical ainda não configurado';
+    else if(st.reason === 'fields') msg = 'Preencha o campo obrigatório: ' + st.fields.map(f => f.label).join(', ');
+    showToast(msg, true);
+    return;
+  }
+  const txt = currentUrl();
+  if(!txt){ showToast('Complete a seleção antes de copiar', true); return; }
+  const btn = $('copyBtn');
+  const ok = () => { flashBtn(btn,'copied','Copiado ✓','Copiar link'); showToast('Link copiado para a área de transferência'); };
+  const fail = () => { selectUrlText(); flashBtn(btn,'warn','Selecione e copie','Copiar link'); showToast('Não foi possível copiar — texto selecionado, use Ctrl+C', true); };
+
+  // 1) execCommand primeiro (melhor compatibilidade em iframe/file://)
+  if(execCopy(txt)){ ok(); return; }
+
+  // 2) API moderna de clipboard
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok).catch(fail);
+    return;
+  }
+
+  // 3) último recurso: seleciona pra cópia manual
+  fail();
+};
+
+
+// -- listeners gerais
+vSel.onchange = () => { refreshBrands(); update(); };
+$('brand').onchange = update;
+
+// -- limpar tudo e recomeçar a seleção do zero
+function resetAll(){
+  vSel.value = 'groceries';     // vertical padrão sempre groceries
+  refreshBrands();              // marca volta a vazio (placeholder)
+  state.action = 'brand_home';  // redirecionamento padrão
+  state.values = {};
+  renderSeg();
+  renderFields();               // limpa campos dinâmicos
+  update();
+}
+$('resetBtn').onclick = resetAll;
+
+// -- init (mesmo estado inicial do reset)
+resetAll();
+</script>
+</body>
+</html>
